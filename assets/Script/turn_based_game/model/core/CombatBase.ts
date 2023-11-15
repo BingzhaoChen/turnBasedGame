@@ -59,6 +59,7 @@ export default abstract class CombatBase <T extends BattleUnitBase> {
     }
 
 
+    /**从行动队列中获取下一行动单位 */
     getNextUnit() {
         this._resetAcitonQueue()
         if (this._actionUnitQueue.length > 0 && !this._checkGameEnd()) { // 确保队列中还有角色  
@@ -72,7 +73,7 @@ export default abstract class CombatBase <T extends BattleUnitBase> {
     }
 
     /**
-     * 单位 执行行动
+     * 行动单位 执行行动
      * @param action_unit 
      * @returns 
      */
