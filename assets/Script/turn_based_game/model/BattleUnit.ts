@@ -129,9 +129,7 @@ export default class BattleUnit extends BattleUnitBase{
     canAction(): boolean {
         let eff = this.effectMgr.getEffect(E_EffectType.STUN)
         if (eff){
-            if (eff.cur_round <= eff.sustain_round){
-                return false
-            }
+            return false
         }
 
         return this.isAlive()

@@ -26,6 +26,9 @@ export default class BattleUnitEffectMgr{
         for (let k in this._effects){
             let eff = this._effects[k]
             eff.cur_round += 1
+            if (eff.sustain_round !== -1 && eff.cur_round > eff.sustain_round){
+                delete this._effects[k]
+            }
         }
     }
 

@@ -9,6 +9,7 @@ import { E_BattleUnitAttr } from "./TurnBasedGameConst"
     /** 当前属性 */
     private _attrs: {[attrType: number]: number} = {}
 
+    /**有些属性需要记录初始值的；如初始进入游戏的生命值为生命值上限 */
     private _initAttrs: {[attrType: number]: number} = {}
 
     initAttr(param: {[attrType: number]: number}){

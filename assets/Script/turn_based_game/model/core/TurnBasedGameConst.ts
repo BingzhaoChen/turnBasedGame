@@ -12,7 +12,7 @@ export interface I_Effect{
     /**当前第几轮 */
     cur_round: number,
 
-    /**持续作用多少轮 */
+    /**持续作用多少轮; -1为持续到游戏结束，除非其他地方移除掉该effect */
     sustain_round: number,
 }
 
