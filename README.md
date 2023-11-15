@@ -8,6 +8,8 @@
 - buff管理
 - 战报
 
+仓库地址:https://github.com/BingzhaoChen/turnBasedGame
+
 # 核心逻辑
 主要战斗逻辑如下：
 游戏有多个回合组成，每个回合由N个角色行动，每个角色包含N个子行动；从战报的结构更容易看出战斗的逻辑
@@ -93,7 +95,7 @@ if (eff){
 testBattle(){
     /*============我方*/
 
-    
+
     let unit_1 = new BattleUnit({
         uid: "1-1",
         unitType: 1,
