@@ -18,6 +18,11 @@ export default class Combat extends CombatBase<BattleUnit> {
      */
     private _battleReport: I_BattleMsg = null
 
+    /**
+     * 在构造函数里初始化完战斗数据后，调用该方法，自动执行整个战斗流程，并返回战报；
+     * 外部UI可以根据返回的战报，写具体的UI界面
+     * @returns 
+     */
     runCombat() {
         this._battleReport = {
             rounds: []
@@ -29,7 +34,7 @@ export default class Combat extends CombatBase<BattleUnit> {
         return this._battleReport
     }
 
-    _runNextRound() {
+    private _runNextRound() {
         this.roundBegin()
         let roundMsg: I_RoundMsg = {
             curRound: this.curRound,
@@ -40,7 +45,7 @@ export default class Combat extends CombatBase<BattleUnit> {
         this._runNextAction()
     }
 
-    _runNextAction() {
+    private _runNextAction() {
         let unit = this.getNextUnit()
         if (unit) {
             let actionResult = this.executeAction(unit)
@@ -58,7 +63,12 @@ export default class Combat extends CombatBase<BattleUnit> {
         }
     }
 
-    _runAction(action_unit: BattleUnit) {
+    /**
+     * 单次行动具体逻辑
+     * @param action_unit 
+     * @returns 
+     */
+    protected _runAction(action_unit: BattleUnit) {
         let target = action_unit.getTarget(this.units)
         if (!target){
             cc.error("no target")
