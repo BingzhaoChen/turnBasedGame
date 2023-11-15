@@ -1,0 +1,8 @@
+{
+  "engine": "cocos2d-html5",
+  "packages": "packages",
+  "version": "2.4.10",
+  "name": "turn_based_game",
+  "id": "06eb28ac-9e2b-4173-9dc4-37b5cefee59e",
+  "isNew": false
+}
