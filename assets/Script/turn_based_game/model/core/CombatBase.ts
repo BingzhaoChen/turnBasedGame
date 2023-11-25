@@ -62,7 +62,7 @@ export default abstract class CombatBase <T extends BattleUnitBase> {
     /**从行动队列中获取下一行动单位 */
     getNextUnit() {
         this._resetAcitonQueue()
-        if (this._actionUnitQueue.length > 0 && !this._checkGameEnd()) { // 确保队列中还有角色  
+        if (this._actionUnitQueue.length > 0 && !this.getGameResult()) { // 确保队列中还有角色  
             this.curUnit = this._actionUnitQueue[0]
             return this.curUnit
         }
@@ -88,7 +88,7 @@ export default abstract class CombatBase <T extends BattleUnitBase> {
      */
     private _onRoundEnd(){
         cc.log(`=======round: ${this.curRound} end =========`)
-        if (this._checkGameEnd()){
+        if (this.getGameResult()){
             this._onBattleEnd()
         }
         else{
@@ -99,7 +99,13 @@ export default abstract class CombatBase <T extends BattleUnitBase> {
         }
     }
 
-    protected abstract _checkGameEnd(): boolean
+    /**
+     * 游戏结果:
+     * 0： 还在打；
+     * -1： 输；
+     * 1： 赢
+     */
+    protected abstract getGameResult(): number
 
     /**
      * 行动具体逻辑

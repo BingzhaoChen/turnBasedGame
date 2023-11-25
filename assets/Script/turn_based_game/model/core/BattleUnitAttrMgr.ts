@@ -36,4 +36,8 @@ import { E_BattleUnitAttr } from "./TurnBasedGameConst"
         }
         this._attrs[type] += num
     }
+
+    get attrs(){
+        return this._attrs
+    }
 }

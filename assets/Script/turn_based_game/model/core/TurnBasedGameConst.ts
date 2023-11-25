@@ -125,14 +125,15 @@ export interface I_SubActionMsg {
 
 export interface I_ActionMsg {
 
+    /**行动ID */
+    actionUID: string
+
+    /**目标ID */
+    targetUID: string
+
     subActions: I_SubActionMsg[]
 }
 
-// export class ExtraMsg{
-//     id: number 
-//     add_hp: number = 0
-//     clear_debuff: boolean = false
-// }
 
 export interface I_RoundMsg{
     /**当前轮数 */
@@ -142,10 +143,32 @@ export interface I_RoundMsg{
     actions: I_ActionMsg[]
 }
 
+export interface UnitInfo{
+    uid: string,
+    id: number,
+    pos: {x, y},
+    unitType: number,
+}
+
 /**
  * 战斗数据
  */
 export interface I_BattleMsg{
+    /**初始单位信息 */
+    units: UnitInfo[]
     rounds: I_RoundMsg[]
+    winGroup: E_UnitGroup
+}
+
+/**
+ * 单位阵营；敌我识别
+ */
+export enum E_UnitGroup{
+
+    NONE,
+
+    MYSELF,
+
+    ENEMY,
 }
 

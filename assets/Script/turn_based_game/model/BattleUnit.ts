@@ -7,22 +7,11 @@ export default class BattleUnit extends BattleUnitBase{
     
     id: number
 
-    /**
-     * 单位类型；敌我识别
-     */
-    unitType: number
-
-    constructor(param: {uid: string, unitType: number, pos: {x,y}}){
-        super(param.uid)
-        this.pos = param.pos
-        this.unitType = param.unitType
-    }
-
     /**获取对手 */
     getTarget(targets: BattleUnit[]){
 
         let arr = targets.filter( (c) => {
-            return ((c.unitType != this.unitType) && c.isAlive())
+            return ((c.unitGroup != this.unitGroup) && c.isAlive())
         })
         
         let target: BattleUnit = null

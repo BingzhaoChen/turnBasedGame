@@ -8,7 +8,7 @@ import MathUtils from "../../MathUtils"
 import BattleFormula from "./BattleFormula"
 import BattleUnit from "./BattleUnit"
 import CombatBase from "./core/CombatBase"
-import { I_BattleMsg, I_RoundMsg, I_ActionMsg, E_SubActionType, I_SubActionMsg, E_BattleUnitAttr, E_EffectType } from "./core/TurnBasedGameConst"
+import { I_BattleMsg, I_RoundMsg, I_ActionMsg, E_SubActionType, I_SubActionMsg, E_BattleUnitAttr, E_EffectType, E_UnitGroup } from "./core/TurnBasedGameConst"
 
 
 export default class Combat extends CombatBase<BattleUnit> {
@@ -25,11 +25,24 @@ export default class Combat extends CombatBase<BattleUnit> {
      */
     runCombat() {
         this._battleReport = {
-            rounds: []
+            units: [],
+            rounds: [],
+            winGroup: E_UnitGroup.NONE,
         }
+        for (let e of this.units){
+            this._battleReport.units.push({
+                uid: e.uid,
+                id: e.id,
+                pos: e.pos,
+                unitType: e.unitGroup,
+            })
+        }
+
         this.battleStart()
 
         this._runNextRound()
+
+        this._battleReport.winGroup = (this.getGameResult() == 1) ? E_UnitGroup.MYSELF : E_UnitGroup.ENEMY
 
         return this._battleReport
     }
@@ -77,6 +90,8 @@ export default class Combat extends CombatBase<BattleUnit> {
 
         cc.log(`======= ${action_unit.uid} 选中了 ${target.uid}======`)
         let actionMsg: I_ActionMsg = {
+            actionUID: action_unit.uid,
+            targetUID: target.uid,
             subActions: []
         }
  
@@ -171,15 +186,18 @@ export default class Combat extends CombatBase<BattleUnit> {
         }
     }
 
-    protected _checkGameEnd(): boolean {
-        let units = this.units.filter(c => (c.isAlive() && c.unitType == 1))
-        let units2 = this.units.filter(c => (c.isAlive() && c.unitType == 2))
+    protected getGameResult(): number {
+        let units = this.units.filter(c => (c.isAlive() && c.unitGroup == E_UnitGroup.MYSELF))
+        let units2 = this.units.filter(c => (c.isAlive() && c.unitGroup == E_UnitGroup.ENEMY))
 
-        if (units.length >= 1 && units2.length >= 1) {
-            return false
+        if (units.length <= 0){
+            return -1
         }
-        else {
-            return true
+        else if (units2.length <= 0){
+            return 1
+        }
+        else{
+            return 0
         }
     }
 
