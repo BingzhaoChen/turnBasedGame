@@ -150,10 +150,10 @@ testBattle(){
 
 ---
 
-<div style="text-align:center">
-  <a href="https://star-history.com/#lining808/CS-Ebook&Date">
-    <img src="https://api.star-history.com/svg?repos=lining808/CS-Ebook&type=Date" alt="Star History Chart">
-  </a>
-</div>
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=BingzhaoChen/turnBasedGame&type=Date)](https://star-history.com/#BingzhaoChen/turnBasedGame&Date)
+
 
 
