@@ -6,7 +6,7 @@
 
 
 import BattleUnitBase from "./BattleUnitBase";
-import { I_ActionMsg } from "./TurnBasedGameConst";
+import { E_UnitGroup, I_ActionMsg } from "./TurnBasedGameConst";
 
 export default abstract class CombatBase <T extends BattleUnitBase> {
     /** 所有单位 */
@@ -23,19 +23,14 @@ export default abstract class CombatBase <T extends BattleUnitBase> {
     /**
      * 战斗结束
      */
-    private _battleEnd: boolean = false
+    private _isBattleEnd: boolean = false
 
     constructor(units: T[]) {
         this.units = units;
         this.curRound = 0;    
-        this._battleEnd = false
-    }
-
-    battleStart(){
+        this._isBattleEnd = false
         this._actionUnitQueue = []
         this.curUnit = null
-        this._battleEnd = false
-        this.curRound = 0;   
     }
 
     /**
@@ -43,6 +38,15 @@ export default abstract class CombatBase <T extends BattleUnitBase> {
      */
     protected _resetAcitonQueue() {
         this._actionUnitQueue = this._actionUnitQueue.filter(c => c.canAction())
+    }
+
+    /**
+     * 战斗开始
+     */
+    public combatStart(){
+        for (let e of this.units){
+            e.onCombatStart();
+        }
     }
 
     /**
@@ -56,8 +60,13 @@ export default abstract class CombatBase <T extends BattleUnitBase> {
             e.effectMgr.addEffectRound()
         }
         cc.log(`=======round: ${this.curRound} begin ====================`)
+
+        this.onRoundBegin()
     }
 
+    protected onRoundBegin(): void{
+
+    }
 
     /**从行动队列中获取下一行动单位 */
     getNextUnit() {
@@ -105,7 +114,20 @@ export default abstract class CombatBase <T extends BattleUnitBase> {
      * -1： 输；
      * 1： 赢
      */
-    protected abstract getGameResult(): number
+     protected getGameResult(): number {
+        let units = this.units.filter(c => (c.isAlive() && c.unitGroup == E_UnitGroup.MYSELF))
+        let units2 = this.units.filter(c => (c.isAlive() && c.unitGroup == E_UnitGroup.ENEMY))
+
+        if (units.length <= 0){
+            return -1
+        }
+        else if (units2.length <= 0){
+            return 1
+        }
+        else{
+            return 0
+        }
+    }
 
     /**
      * 行动具体逻辑
@@ -117,12 +139,12 @@ export default abstract class CombatBase <T extends BattleUnitBase> {
      * 战斗结束
      */
     private _onBattleEnd(){
-        this._battleEnd = true
+        this._isBattleEnd = true
         cc.log(`=======battle end =========`)
     }
 
-    get battleEnd(){
-        return this._battleEnd
+    get isBattleEnd(){
+        return this._isBattleEnd
     }
 
 }

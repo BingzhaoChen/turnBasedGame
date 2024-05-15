@@ -5,12 +5,14 @@
  * 
  */
 export interface I_Effect{
-    id: E_EffectType,
+    /**特效类型 */
+    effType: E_EffectType,
 
-    eff_num: number,
+    /**特效数值 */
+    effNum: number,
 
     /**当前第几轮 */
-    cur_round: number,
+    curRound: number,
 
     /**持续作用多少轮; -1为持续到游戏结束，除非其他地方移除掉该effect */
     sustain_round: number,
@@ -22,33 +24,23 @@ export interface I_Effect{
 export enum E_EffectType{
 
     NONE,
-    
-    // /**吸血 */
-    // suck_blood = 1,
 
-    // /**减少伤害 */
-    // harm_reduction,
+    /**防御加成 */
+    DEFENSE_ADD = 4,
 
-    // /**命中率下降 % */
-    // reduce_hit_rate ,
+    /**
+     * 伤害减免
+     */
+    HART_REDUCE = 6,
 
-    // /**攻击力下降 % */
-    // reduce_atk_percent,
+    /**被点燃 */
+    BE_FIRE = 10,
 
-    // /**回复生命 % */
-    // add_hp_percent,
+    /**增加生命上限比例 */
+    ADD_HP_MAX = 18,
 
-    // /**增加攻击力 %*/
-    // add_atk,
-
-    // /**增加命中率 % */
-    // add_hit_rate,
-
-    // /**增加生命上限 */
-    // add_hp_base,
-
-    /**击晕 */
-    STUN,
+    /**被击晕 */
+    BE_STUN = 100,
 
 }
 
@@ -57,7 +49,7 @@ export enum E_EffectType{
  */
 export enum E_BattleUnitAttr{
     /**速度 */
-    SPEED = 1,
+    SPEED = 1001,
 
     /**生命 */
     HP,
@@ -86,16 +78,68 @@ export enum E_BattleUnitAttr{
     /**击晕概率 */
     STUN_RATE,
 
+    /**忽视吸血 */
+    IGNORE_SUCK_BLOOD,
+
+    /**忽视反击 */
+    IGNORE_CONUTERATTACT_RATE,
+
+    /**忽视连击 */
+    IGNORE_DOUBLE_HIT_RATE,
+
+    /**忽视闪避 */
+    IGNORE_DODGE_RATE,
+
+    /**忽视暴击 */
+    IGNORE_CRITICAL_RATE,
+
+    /**忽视击晕 */
+    IGNORE_STUN_RATE,
+
+    /**暴虐 提高暴击伤害*/
+    CRITICAL_HURT,
+
+    /**仁爱 减少对方暴击伤害*/
+    IGNORE_CRITICAL_HURT,
+
+    /**泥泞 减少对方速度*/
+    MUDDY,
+
+    /**禁疗 减少对方治疗效果*/
+    RECOVER_FORBIDDEN,
+
+    /**回复 第五回合回复生命*/
+    RECOVER,
+
+    /**欺凌 对方低于半血增伤*/
+    BULLYING,
+
+    /**掠财 增加挑战胜利金币*/
+    PLUNDER,
+
+    /**伤害减免 */
+    HURT_REDUCE_RATE,
+
+    /**忽略防御 */
+    IGNORE_DEFENSE_RATE,
+
+    /**攻击力加成 */
+    ATK_ADD_RATE,
+
+    /**伤害加成 */
+    HURT_ADD_RATE,
 }
 
+
+/**行动类型 */
 export enum E_SubActionType{
     NORMAL = 1,
 
     /**连击 */
-    DOUBLE_HIT,
+    DOUBLE_HIT = 2,
 
     /**反击 */
-    COUNTERATTACK,
+    COUNTERATTACK = 3,
 }
 
 export interface I_SubActionMsg {
@@ -121,6 +165,9 @@ export interface I_SubActionMsg {
     /** 击晕 */
     stun?: boolean
 
+    targetDie?: boolean
+
+    playSkill?: {skillID: number, eff: I_Effect[]}[]
 }
 
 export interface I_ActionMsg {
@@ -141,19 +188,29 @@ export interface I_RoundMsg{
 
     /**行动数据 */
     actions: I_ActionMsg[]
+
+    beFireUnit?: string;
+
+    beFireHurt?: number;
 }
 
 export interface UnitInfo{
     uid: string,
-    id: number,
+    id: string,
     pos: {x, y},
+    unitGroup: number,
     unitType: number,
+    hp: number,
+    power: number,
+    nickname: string,
+    headIcon: string,
+    sexID: number,
 }
 
 /**
  * 战斗数据
  */
-export interface I_BattleMsg{
+export interface I_BattleResultMsg{
     /**初始单位信息 */
     units: UnitInfo[]
     rounds: I_RoundMsg[]
@@ -167,8 +224,10 @@ export enum E_UnitGroup{
 
     NONE,
 
+    /**自己 */
     MYSELF,
 
+    /**敌人 */
     ENEMY,
 }
 

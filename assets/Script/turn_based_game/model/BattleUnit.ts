@@ -1,11 +1,31 @@
-import Vec2Utils from "../../Vec2Utils"
+import MathUtils from "../../../../../framework/utils/MathUtils"
+import Vec2Utils from "../../../../../framework/utils/Vec2Utils"
 import BattleUnitBase from "./core/BattleUnitBase"
-import { E_BattleUnitAttr, E_EffectType } from "./core/TurnBasedGameConst"
+import { E_BattleUnitAttr, E_EffectType, I_Effect } from "./core/TurnBasedGameConst"
 
 
 export default class BattleUnit extends BattleUnitBase{
+
+    /**
+     *  用于战斗单位外形
+     */
+    unitType: number
     
-    id: number
+    /**
+     *  用于战斗单位外形
+     */
+    id: string
+
+    /**
+     * 战力
+     */
+    power: number = 0
+
+    nickname: string = ""
+
+    headIcon: string = ""
+
+    sexID: number = 0
 
     /**获取对手 */
     getTarget(targets: BattleUnit[]){
@@ -33,60 +53,37 @@ export default class BattleUnit extends BattleUnitBase{
         return target
     }
 
-    beHurt(count: number){
-        this.attrMgr.addAttrNum(E_BattleUnitAttr.HP, -count)
-
-        // if (this.attrMgr.getAttr(E_BattleUnitAttr.cur_hp) <= this.getMaxHp()/2){
-        //     if (this.skills){
-        //         for (let skill of this.skills){
-        //             if (skill.id == 20003){
-        //                 this._addEffectBySkill(skill)
-        //                 return true
-        //             }
-        //         }
-        //     }
-        // }
+    onCombatStart(){
+        
     }
 
-    // _addEffectBySkill(skill: SkillBase){
-    //     if (skill.cfg.is_myself){
-    //         if (skill.cfg.random_effect){
-    //             let effect: gameConfig.IEffect = MathUtils.randomArr(skill.cfg.effect, 1)[0]
-    //             if (effect && effect.effect_type){
-    //                 this.effectMgr.addEffect({
-    //                     id: effect.effect_type,
-    //                     eff_num: effect.eff_num,
-    //                     cur_round: 1,
-    //                     sustain_round: effect.sustain_round,
-    //                 })
-    //             }
-    //             else{
-    //                 cc.error("random_effect:", skill.cfg.effect)
-    //             }
-    //         }
-    //         else{
-    //             for (let effect of skill.cfg.effect){
-    //                 this.effectMgr.addEffect({
-    //                     id: effect.effect_type,
-    //                     eff_num: effect.eff_num,
-    //                     cur_round: 1,
-    //                     sustain_round: effect.sustain_round,
-    //                 })
-    //             }
-    //         }
-    //     }
-    //     else {
-    //         for (let effect of skill.cfg.effect){
-    //             let target = this.getOpponent(this.targets)
-    //             target?.effectMgr.addEffect({
-    //                 id: effect.effect_type,
-    //                 eff_num: effect.eff_num,
-    //                 cur_round: 1,
-    //                 sustain_round: effect.sustain_round,
-    //             })
-    //         }
-    //     }
-    // }
+    playSkill(targets: BattleUnit[]){
+        // let ids: number[] = []
+
+        let skills:{skillID: number, eff: I_Effect[]}[] = []
+        for (let e of this.allSkills){
+            let temp: {skillID: number, eff: I_Effect[]} = {
+                skillID: e.id,
+                eff: [],
+            }
+            if (e.moment == 2 && e.target_type == 1){
+                let b = MathUtils.weightBingo(e.rate, 10000)
+                if (b){
+                    for (let eff of e.effects){
+                        targets[0].effectMgr.addEffect(eff)
+                        temp.eff.push(eff)
+                        cc.log(`uid:${targets[0].uid}被挂上BUFF`, eff)
+                    }
+                }
+            }
+            skills.push(temp)
+        }
+        return skills;
+    }
+
+    beHurt(count: number){
+        this.attrMgr.addAttrValue(E_BattleUnitAttr.HP, -count)
+    }
 
     onOneRoundEnd(){
 
@@ -116,7 +113,7 @@ export default class BattleUnit extends BattleUnitBase{
     }
 
     canAction(): boolean {
-        let eff = this.effectMgr.getEffect(E_EffectType.STUN)
+        let eff = this.effectMgr.getEffect(E_EffectType.BE_STUN)
         if (eff){
             return false
         }

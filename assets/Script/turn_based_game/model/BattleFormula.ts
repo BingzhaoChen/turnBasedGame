@@ -4,37 +4,109 @@
  * 
  */
 
+import MathUtils from "../../../../../framework/utils/MathUtils"
 import BattleUnit from "./BattleUnit"
 import { E_BattleUnitAttr } from "./core/TurnBasedGameConst"
 
-
 export default class BattleFormula {
-
 
     /** 当前攻击力 */
     static getAtk(unit: BattleUnit) {
-        let rate = 0
+
+        let rate = unit.attrMgr.getAttr(E_BattleUnitAttr.ATK_ADD_RATE)
+        rate /= 10000
+
         let num = unit.attrMgr.getAttr(E_BattleUnitAttr.ATK) * (1 + rate)
 
         return num
     }
 
-    static getDefense(unit: BattleUnit){
-        return unit.attrMgr.getAttr(E_BattleUnitAttr.DEFENSE)
-    }
+    /**
+     * 普通伤害值
+     * @param action 
+     * @param target 
+     */
+    static getNormalHurt(action: BattleUnit, target: BattleUnit) {
+        let atk = this.getAtk(action)
+        let defense = this.getDefense(action, target)
 
-    /**当前暴击几率 */
-    static getCritical(unit: BattleUnit) {
-        return unit.attrMgr.getAttr(E_BattleUnitAttr.CRITICAL_RATE)
+        let hurt = Math.max((atk - defense), 0) + atk * 0.025
+        hurt *=  (MathUtils.randomNum(95, 105) / 100)
+
+        if (this.getHpPercent(target) < 0.5) {
+            let bullying = action.attrMgr.getAttr(E_BattleUnitAttr.BULLYING) / 10000
+            if (bullying) {
+                /**触发 欺凌 */
+                hurt += bullying * hurt
+            }
+        }
+        return Math.round(hurt)
     }
 
     /**
-     * 闪避几率
-     * @param unit 
-     * @returns 
+     * 伤害加成
      */
-    static getDodge(unit: BattleUnit) {
-        return unit.attrMgr.getAttr(E_BattleUnitAttr.DODGE_RATE)
+    static hurtAdd(hurt: number, action: BattleUnit) {
+        let num = action.attrMgr.getAttr(E_BattleUnitAttr.HURT_ADD_RATE)
+        if (num) {
+            let reduceNum = num / 10000 * hurt
+            cc.log(`行动角色：${action.id};伤害加成比例${num/10000},加成数值:${reduceNum}`)
+            hurt += reduceNum
+        }
+
+        return Math.round(hurt)
+    }
+
+    /**
+     * 伤害减免
+     */
+    static hurtReduce(hurt: number, target: BattleUnit) {
+        let num = target.attrMgr.getAttr(E_BattleUnitAttr.HURT_REDUCE_RATE)
+        if (num) {
+            let reduceNum = num / 10000 * hurt
+            cc.log("伤害减免：", reduceNum)
+            hurt -= reduceNum
+        }
+
+        return Math.round(hurt)
+    }
+
+    /**防御 */
+    static getDefense(action: BattleUnit, target: BattleUnit) {
+
+        let defense = target.attrMgr.getAttr(E_BattleUnitAttr.DEFENSE)
+
+        let rate = action.attrMgr.getAttr(E_BattleUnitAttr.IGNORE_DEFENSE_RATE)
+
+        defense = defense * (1 - rate/10000)
+
+        return Math.round(defense)
+    }
+
+    static getHpPercent(unit: BattleUnit) {
+        return unit.attrMgr.getAttr(E_BattleUnitAttr.HP) / unit.attrMgr.getInitialAttr(E_BattleUnitAttr.HP)
+    }
+
+    /**当前暴击几率 */
+    static getCritical(unit: BattleUnit, target: BattleUnit) {
+        let rate = 0
+
+        let n1 = unit.attrMgr.getAttr(E_BattleUnitAttr.CRITICAL_RATE)
+
+        let n2 = target.attrMgr.getAttr(E_BattleUnitAttr.IGNORE_CRITICAL_RATE)
+
+        rate = Math.max(n1 - n2, 0) / 10000
+        return rate
+    }
+
+    /**暴击伤害 */
+    static getCriticalHurt(normalHurt: number, unit: BattleUnit, target: BattleUnit) {
+
+        let n1 = unit.attrMgr.getAttr(E_BattleUnitAttr.CRITICAL_HURT)
+        let n2 = target.attrMgr.getAttr(E_BattleUnitAttr.IGNORE_CRITICAL_HURT)
+        let finalHurt = normalHurt * (1.5 + Math.max(n1 - n2, 0))
+
+        return Math.round(finalHurt)
     }
 
     /**
@@ -42,12 +114,34 @@ export default class BattleFormula {
      * @param unit 
      * @returns 
      */
-    static getCounterattack(unit: BattleUnit){
-        return unit.attrMgr.getAttr(E_BattleUnitAttr.COUNTERATTACK_RATE)
+    static getCounterattack(unit: BattleUnit, target: BattleUnit) {
+
+        let rate = 0
+
+        let n1 = target.attrMgr.getAttr(E_BattleUnitAttr.COUNTERATTACK_RATE)
+
+        let n2 = unit.attrMgr.getAttr(E_BattleUnitAttr.IGNORE_CONUTERATTACT_RATE)
+
+        rate = Math.max(n1 - n2, 0) / 10000
+        return rate
     }
 
-    static getDoubleHit(unit: BattleUnit){
-        return unit.attrMgr.getAttr(E_BattleUnitAttr.DOUBLE_HIT_RATE)
+    /**
+     * 连击
+     * @param unit 
+     * @param target 
+     * @returns 
+     */
+    static getDoubleHit(unit: BattleUnit, target: BattleUnit) {
+
+        let rate = 0
+
+        let n1 = unit.attrMgr.getAttr(E_BattleUnitAttr.DOUBLE_HIT_RATE)
+
+        let n2 = target.attrMgr.getAttr(E_BattleUnitAttr.IGNORE_DOUBLE_HIT_RATE)
+
+        rate = Math.max(n1 - n2, 0) / 10000
+        return rate
     }
 
     /**
@@ -55,52 +149,15 @@ export default class BattleFormula {
      * @param unit 
      * @returns 
      */
-    static getCurHitRate(unit: BattleUnit) {
+    static getCurHitRate(unit: BattleUnit, target: BattleUnit) {
         let rate = 0
 
-        // let reduce_hit_rate = this.effectMgr.effects[E_EffectType.reduce_hit_rate]
-        // if (reduce_hit_rate){
-        //     if (reduce_hit_rate.sustain_round == -1){
-        //         rate -= reduce_hit_rate.eff_num
-        //     }
-        //     else if (reduce_hit_rate.cur_round <= reduce_hit_rate.sustain_round){
-        //         rate -= reduce_hit_rate.eff_num
-        //     }
-        // }
+        let n1 = target.attrMgr.getAttr(E_BattleUnitAttr.DODGE_RATE)
 
-        // let add_hit_rate = this.effectMgr.effects[E_EffectType.add_hit_rate]
-        // if (add_hit_rate){
-        //     if (add_hit_rate.sustain_round == -1){
-        //         rate += add_hit_rate.eff_num
-        //     }
-        //     else if (add_hit_rate.cur_round <= add_hit_rate.sustain_round){
-        //         rate += add_hit_rate.eff_num
-        //     }
-        // }
+        let n2 = unit.attrMgr.getAttr(E_BattleUnitAttr.IGNORE_DODGE_RATE)
 
-
-        // return this.attrMgr.getAttr(E_BattleUnitAttr.base_hitRate) + rate
-        return 1
-    }
-
-    /**
-     * 计算实际受到伤害值
-     * @param originHurt 
-     */
-    static getBeActualHurt(originHurt: number, unit: BattleUnit) {
-
-        let act_hurt = originHurt
-        // let eff = unit.effectMgr.effects[E_EffectType.harm_reduction]
-        // if (eff) {
-        //     if (eff.sustain_round == -1) {
-        //         act_hurt -= eff.eff_num
-        //     }
-        //     else if (eff.cur_round <= eff.sustain_round) {
-        //         act_hurt -= eff.eff_num
-        //     }
-        // }
-
-        return Math.round(act_hurt)
+        rate = 1 - Math.max(n1 - n2, 0) / 10000
+        return rate
     }
 
     /**
@@ -109,40 +166,33 @@ export default class BattleFormula {
      * @param unit 
      * @returns 
      */
-    static getSuckBlood(hurt: number, unit: BattleUnit){
+    static getSuckBlood(hurt: number, unit: BattleUnit, targetUnit: BattleUnit) {
         let num = unit.attrMgr.getAttr(E_BattleUnitAttr.SUCK_BLOOD)
-        // let eff = unit.effectMgr.effects[E_EffectType.suck_blood]
-        // if (eff){
-        //     if (eff.sustain_round == -1){
-        //         num = eff.eff_num
-        //     }
-        //     else if (eff.cur_round <= eff.sustain_round){
-        //         num = eff.eff_num
-        //     }
-        // }
+        let num_2 = targetUnit.attrMgr.getAttr(E_BattleUnitAttr.IGNORE_SUCK_BLOOD)
 
-        return Math.round(hurt * num)
+        let rate = Math.max(num - num_2, 0) / 10000
+
+        return Math.round(hurt * rate)
     }
 
-    static getStunRate(unit: BattleUnit){
-        let num = unit.attrMgr.getAttr(E_BattleUnitAttr.STUN_RATE)
-        return num
+    /**
+     * 击晕概率
+     * @param unit 
+     * @param target 
+     * @returns 
+     */
+    static getStunRate(unit: BattleUnit, target: BattleUnit) {
+        let n1 = unit.attrMgr.getAttr(E_BattleUnitAttr.STUN_RATE)
+        let n2 = target.attrMgr.getAttr(E_BattleUnitAttr.IGNORE_STUN_RATE)
+
+        let rate = Math.max(n1 - n2, 0) / 10000
+
+        return rate
     }
 
-    // getMaxHp(){
-    //     let rate = 0
-    //     let eff = this.effectMgr.getEffect(E_EffectType.add_hp_base)
-    //     if (eff){
-    //         if (eff.sustain_round == -1){
-    //             rate += eff.eff_num
-    //         }
-    //         else if (eff.cur_round <= eff.sustain_round){
-    //             rate += eff.eff_num
-    //         }
-    //     }
+    static getSpeed(unit: BattleUnit, target: BattleUnit) {
+        let speed = unit.attrMgr.getAttr(E_BattleUnitAttr.SPEED) * (1 - Math.min(target.attrMgr.getAttr(E_BattleUnitAttr.MUDDY) / 10000, 0.75))
+        return speed
+    }
 
-    //     let num = this.attrMgr.getAttr(E_BattleUnitAttr.hp_upper_limit) * (1 + rate)
-
-    //     return num
-    // }
 }

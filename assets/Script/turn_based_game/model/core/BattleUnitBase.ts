@@ -1,5 +1,6 @@
 import BattleUnitAttrMgr from "./BattleUnitAttrMgr"
 import BattleUnitEffectMgr from "./BattleUnitEffectMgr"
+import SkillBase from "./SkillBase"
 
 export default abstract class BattleUnitBase{
 
@@ -11,6 +12,8 @@ export default abstract class BattleUnitBase{
 
     /** buff debuff */
     effectMgr = new BattleUnitEffectMgr()
+
+    allSkills: SkillBase[] = [];
 
     /** 位置 */
     pos: {x, y} = {x: 0, y: 0}
@@ -33,6 +36,11 @@ export default abstract class BattleUnitBase{
      * @returns 
      */
     abstract canAction(): boolean
+
+    /**
+     * 战斗开始
+     */
+    abstract onCombatStart(): void;
 
     onOneRoundEnd(){
 

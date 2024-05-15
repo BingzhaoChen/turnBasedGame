@@ -4,11 +4,11 @@
  * 
  */
 
-import MathUtils from "../../MathUtils"
+import MathUtils from "../../../../../framework/utils/MathUtils"
 import BattleFormula from "./BattleFormula"
 import BattleUnit from "./BattleUnit"
 import CombatBase from "./core/CombatBase"
-import { I_BattleMsg, I_RoundMsg, I_ActionMsg, E_SubActionType, I_SubActionMsg, E_BattleUnitAttr, E_EffectType, E_UnitGroup } from "./core/TurnBasedGameConst"
+import { I_BattleResultMsg, I_RoundMsg, I_ActionMsg, E_SubActionType, I_SubActionMsg, E_BattleUnitAttr, E_EffectType, E_UnitGroup } from "./core/TurnBasedGameConst"
 
 
 export default class Combat extends CombatBase<BattleUnit> {
@@ -16,14 +16,21 @@ export default class Combat extends CombatBase<BattleUnit> {
     /**
      * 战斗记录
      */
-    private _battleReport: I_BattleMsg = null
+    private _battleReport: I_BattleResultMsg = null
+
+
+    /**
+     * 1: 竞技场； 2：PVE
+     */
+    battleType: number = 1;
 
     /**
      * 在构造函数里初始化完战斗数据后，调用该方法，自动执行整个战斗流程，并返回战报；
      * 外部UI可以根据返回的战报，写具体的UI界面
      * @returns 
      */
-    runCombat() {
+    runCombat(battleType: number) {
+        this.battleType = battleType;
         this._battleReport = {
             units: [],
             rounds: [],
@@ -34,27 +41,28 @@ export default class Combat extends CombatBase<BattleUnit> {
                 uid: e.uid,
                 id: e.id,
                 pos: e.pos,
-                unitType: e.unitGroup,
+                unitGroup: e.unitGroup,
+                unitType: e.unitType,
+                hp: e.attrMgr.getAttr(E_BattleUnitAttr.HP),
+                power: e.power,
+                nickname: e.nickname || "",
+                headIcon: e.headIcon || "",
+                sexID: e.sexID,
             })
         }
 
-        this.battleStart()
+        this.combatStart();
 
         this._runNextRound()
 
         this._battleReport.winGroup = (this.getGameResult() == 1) ? E_UnitGroup.MYSELF : E_UnitGroup.ENEMY
-
+        cc.log("战斗结果：", this._battleReport)
         return this._battleReport
     }
 
     private _runNextRound() {
         this.roundBegin()
-        let roundMsg: I_RoundMsg = {
-            curRound: this.curRound,
-            actions: []
-        }
-        this._battleReport.rounds.push(roundMsg)
-
+        
         this._runNextAction()
     }
 
@@ -62,12 +70,11 @@ export default class Combat extends CombatBase<BattleUnit> {
         let unit = this.getNextUnit()
         if (unit) {
             let actionResult = this.executeAction(unit)
-            cc.log("result :", actionResult)
             this._battleReport.rounds[this._battleReport.rounds.length - 1].actions.push(actionResult)
             this._runNextAction()
         }
         else {
-            if (!this.battleEnd) {
+            if (!this.isBattleEnd) {
                 this._runNextRound()
             }
             else {
@@ -78,43 +85,42 @@ export default class Combat extends CombatBase<BattleUnit> {
 
     /**
      * 单次行动具体逻辑
-     * @param action_unit 
+     * @param acitonUnit 
      * @returns 
      */
-    protected _runAction(action_unit: BattleUnit) {
-        let target = action_unit.getTarget(this.units)
+    protected _runAction(acitonUnit: BattleUnit) {
+        let target = acitonUnit.getTarget(this.units)
         if (!target){
             cc.error("no target")
             return null
         }
 
-        cc.log(`======= ${action_unit.uid} 选中了 ${target.uid}======`)
+        cc.log(`======= ${acitonUnit.uid} 选中了 ${target.uid}======`)
         let actionMsg: I_ActionMsg = {
-            actionUID: action_unit.uid,
+            actionUID: acitonUnit.uid,
             targetUID: target.uid,
             subActions: []
         }
  
-        let result_1 = this._runSubAction(action_unit, target, E_SubActionType.NORMAL)
+        const result_1 = this._runSubAction(acitonUnit, target, E_SubActionType.NORMAL);
         actionMsg.subActions.push(result_1)
-        if (target.canAction()){
-            if (MathUtils.rateBingo(BattleFormula.getCounterattack(target))){
-                let result_2 = this._runSubAction(target, action_unit, E_SubActionType.COUNTERATTACK)
-                actionMsg.subActions.push(result_2)
-            }
-        }
 
-        if (action_unit.isAlive() && target.isAlive()){
-            if (MathUtils.rateBingo(BattleFormula.getDoubleHit(action_unit))){
-                let result_3 = this._runSubAction(action_unit, target, E_SubActionType.DOUBLE_HIT)
+        // 提取重复代码至独立函数，优化代码可读性和维护性
+        const runCounterAttackIfNeeded = (attacker: BattleUnit, defender: BattleUnit) => {
+            if (defender.canAction() && MathUtils.rateBingo(BattleFormula.getCounterattack(defender, attacker))) {
+                let result = this._runSubAction(defender, attacker, E_SubActionType.COUNTERATTACK);
+                actionMsg.subActions.push(result);
+            }
+        };
+
+        runCounterAttackIfNeeded(acitonUnit, target);
+
+        if (acitonUnit.isAlive() && target.isAlive()){
+            if (MathUtils.rateBingo(BattleFormula.getDoubleHit(acitonUnit, target))){
+                let result_3 = this._runSubAction(acitonUnit, target, E_SubActionType.DOUBLE_HIT)
                 actionMsg.subActions.push(result_3)
 
-                if (target.canAction()){
-                    if (MathUtils.rateBingo(BattleFormula.getCounterattack(target))){
-                        let result_2 = this._runSubAction(target, action_unit, E_SubActionType.COUNTERATTACK)
-                        actionMsg.subActions.push(result_2)
-                    }
-                }
+                runCounterAttackIfNeeded(acitonUnit, target);
             }
         }
 
@@ -124,59 +130,81 @@ export default class Combat extends CombatBase<BattleUnit> {
     /**
      * 子行为
      * @param actionUnit 
-     * @param target 
+     * @param targetUnit 
      * @param subActionType 
      * @returns 
      */
-    _runSubAction(actionUnit: BattleUnit, target: BattleUnit, subActionType: E_SubActionType) {
-        cc.log(`${actionUnit.uid} 攻击 ${target.uid}==攻击类型：${E_SubActionType[subActionType]}`)
+    _runSubAction(actionUnit: BattleUnit, targetUnit: BattleUnit, subActionType: E_SubActionType) {
+        cc.log(`${actionUnit.uid} 攻击 ${targetUnit.uid}==攻击类型：${E_SubActionType[subActionType]}`)
 
         let result: I_SubActionMsg = {
             subActionType: subActionType,
             actionUID: actionUnit.uid,
-            targetUID: target.uid,
+            targetUID: targetUnit.uid,
         }
 
-        let hit_rate = BattleFormula.getCurHitRate(actionUnit)
-        let rate = hit_rate - BattleFormula.getDodge(target)
-        let hit = MathUtils.rateBingo(rate)
+        let hitRate = BattleFormula.getCurHitRate(actionUnit, targetUnit)
+        let hit = MathUtils.rateBingo(hitRate)
         if (hit) {
             //命中
 
-            let attack = BattleFormula.getAtk(actionUnit)
-            let targetDefense = BattleFormula.getDefense(target)
-
-            let hurt_num = Math.max(attack - targetDefense, 1)
-            if (MathUtils.rateBingo(BattleFormula.getCritical(actionUnit))) {
+            let hurtNum = BattleFormula.getNormalHurt(actionUnit, targetUnit)
+            if (this.battleType == 1){
+                if (!targetUnit.power){
+                    cc.error("power not found")
+                    hurtNum = Math.round(hurtNum)
+                }
+                else{
+                    if (actionUnit.unitGroup == E_UnitGroup.MYSELF && actionUnit.power > targetUnit.power){
+                        hurtNum = Math.round(hurtNum * (actionUnit.power / targetUnit.power))
+                    }
+                    else{
+                        hurtNum = Math.round(hurtNum)
+                    }
+                }
+            }
+            if (MathUtils.rateBingo(BattleFormula.getCritical(actionUnit, targetUnit))) {
                 // 暴击
                 result.critical = true
-                hurt_num *= 2
+                hurtNum = BattleFormula.getCriticalHurt(hurtNum, actionUnit, targetUnit)
             }
 
-            hurt_num = BattleFormula.getBeActualHurt(attack, target)
-            target.beHurt(hurt_num)
+            hurtNum = BattleFormula.hurtAdd(hurtNum, actionUnit)
 
-            let suck_blood = BattleFormula.getSuckBlood(hurt_num, actionUnit)
+            hurtNum = BattleFormula.hurtReduce(hurtNum, targetUnit)
+
+            targetUnit.beHurt(hurtNum)
+
+            let suck_blood = BattleFormula.getSuckBlood(hurtNum, actionUnit, targetUnit)
             if (suck_blood) {
                 cc.log(`${actionUnit.uid} 吸血:${suck_blood}`)
-                actionUnit.attrMgr.addAttrNum(E_BattleUnitAttr.HP, suck_blood)
+                actionUnit.attrMgr.addAttrValue(E_BattleUnitAttr.HP, suck_blood)
                 result.suckBlood = suck_blood
             }
 
-            if (MathUtils.rateBingo(BattleFormula.getStunRate(actionUnit))){
+            if (MathUtils.rateBingo(BattleFormula.getStunRate(actionUnit, targetUnit))){
                 //击晕
-                cc.log(`${target.uid}==被晕了===`)
-                target.effectMgr.addEffect({
-                    id: E_EffectType.STUN, 
-                    eff_num: 0, 
-                    cur_round: 1,
+                cc.log(`${targetUnit.uid}==被晕了===`)
+                targetUnit.effectMgr.addEffect({
+                    effType: E_EffectType.BE_STUN, 
+                    effNum: 0, 
+                    curRound: 1,
                     sustain_round: 1,
                 })
                 result.stun = true
             }
 
+            let skills = actionUnit.playSkill([targetUnit]);
+            if (skills){
+                result.playSkill = skills;
+            }
+
+            if (targetUnit.attrMgr.getAttr(E_BattleUnitAttr.HP) <= 0){
+                result.targetDie = true;
+            }
+
             result.isMiss = false
-            result.hurtNum = hurt_num
+            result.hurtNum = hurtNum
             return result
         }
         else {
@@ -186,24 +214,31 @@ export default class Combat extends CombatBase<BattleUnit> {
         }
     }
 
-    protected getGameResult(): number {
-        let units = this.units.filter(c => (c.isAlive() && c.unitGroup == E_UnitGroup.MYSELF))
-        let units2 = this.units.filter(c => (c.isAlive() && c.unitGroup == E_UnitGroup.ENEMY))
-
-        if (units.length <= 0){
-            return -1
-        }
-        else if (units2.length <= 0){
-            return 1
-        }
-        else{
-            return 0
-        }
-    }
-
     protected _resetAcitonQueue() {
         this._actionUnitQueue = this._actionUnitQueue.filter(c => c.canAction())
-        this._actionUnitQueue.sort((a, b) => b.attrMgr.getAttr(E_BattleUnitAttr.SPEED) - a.attrMgr.getAttr(E_BattleUnitAttr.SPEED))
+        this._actionUnitQueue.sort((a, b) => BattleFormula.getSpeed(b, a) - BattleFormula.getSpeed(a, b) )
+    }
+
+    onRoundBegin(): void {
+        let roundMsg: I_RoundMsg = {
+            curRound: this.curRound,
+            actions: []
+        }
+        this._battleReport.rounds.push(roundMsg)
+        for (let e of this._actionUnitQueue){
+            for (let key in e.effectMgr.effects){
+                let effect = e.effectMgr.effects[key]
+                if (effect.effType == E_EffectType.BE_FIRE){
+                    let hurt = effect.effNum / 10000 * e.attrMgr.getAttr(E_BattleUnitAttr.HP)
+                    hurt = Math.round(hurt)
+                    e.beHurt(hurt)
+                    this._battleReport.rounds[this._battleReport.rounds.length - 1].beFireUnit = e.uid;
+                    this._battleReport.rounds[this._battleReport.rounds.length - 1].beFireHurt = hurt;
+
+                    cc.log(`uid: ${e.uid},被烧伤：${hurt}`);
+                }
+            }
+        }
     }
 
 }

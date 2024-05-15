@@ -6,11 +6,11 @@
 import { I_Effect, E_EffectType } from "./TurnBasedGameConst"
 
 export default class BattleUnitEffectMgr{
-    private _effects: {[id: number]: I_Effect} = {}
+    private _effects: {[id: string]: I_Effect} = {}
 
     addEffect(effect: I_Effect){
-        if (effect && effect.id){
-            this._effects[effect.id] = effect
+        if (effect && effect.effType){
+            this._effects[effect.effType] = effect
         }
         else{
             
@@ -25,8 +25,8 @@ export default class BattleUnitEffectMgr{
     addEffectRound(){
         for (let k in this._effects){
             let eff = this._effects[k]
-            eff.cur_round += 1
-            if (eff.sustain_round !== -1 && eff.cur_round > eff.sustain_round){
+            eff.curRound += 1
+            if (eff.sustain_round !== -1 && eff.curRound > eff.sustain_round){
                 delete this._effects[k]
             }
         }
